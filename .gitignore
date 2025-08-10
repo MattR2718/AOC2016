@@ -28,3 +28,5 @@ Makefile
 *.user
 *.log
 *.tmp
+
+settings.json
