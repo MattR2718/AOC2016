@@ -1,0 +1,30 @@
+# Ignore build and inputs folders
+build/
+inputs/
+
+# Ignore common C++ build artifacts
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.out
+*.a
+*.lib
+
+# Ignore editor and OS files
+*~
+*.swp
+.DS_Store
+Thumbs.db
+
+# Ignore CMake and Makefile generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Ignore user-specific files
+*.user
+*.log
+*.tmp
