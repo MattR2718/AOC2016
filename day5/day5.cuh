@@ -29,12 +29,12 @@ inline std::ostream& operator<<(std::ostream& os, const str& s) {
 
 struct POS{
     uint8_t value;
-    uint32_t index;
+    int32_t index;
 };
 
 struct ANS{
     POS ans[8];
 };
 
-void md5(const str& input, str& p1, str& p2);
+std::pair<std::string, std::string> md5(const str& input);
 

@@ -59,18 +59,20 @@ __device__ void unlock(int *mutex) {
     atomicExch(mutex, 0);
 }
 
-__global__ void md5_kernel_variable_length(
+__global__ void md5_kernel(
     const uint8_t* base_str,
     const uint32_t base_str_len,
     const uint32_t start_index,
-    uint8_t* __restrict__ output_hashes,
+    ANS* p1_a,
+    ANS* p2_a,
     size_t num_inputs,
-    bool* valid_flags
+    int* mutex
 ) {
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (idx >= num_inputs) return;
 
+    // Count digits of number to be appended
     uint32_t num = idx + start_index;
     uint32_t digits = 1;
     while (num >= 10) {
@@ -79,11 +81,13 @@ __global__ void md5_kernel_variable_length(
     }
     uint32_t len = base_str_len + digits;
 
+    // Copy base string into new string
     uint8_t str[32] = {0};
     for (uint32_t i = 0; i < base_str_len && i < 32; i++) {
         str[i] = base_str[i];
     }
 
+    // Add number on to end of input string
     int temp = idx + start_index;
     for (int i = len - 1; i >= (int)base_str_len; i--) {
         str[i] = '0' + (temp % 10);
@@ -167,7 +171,7 @@ __global__ void md5_kernel_variable_length(
     d0 += D;
 
     // Store hash output (little endian)
-    uint8_t* out = output_hashes + idx * MD5_HASH_SIZE;
+    uint8_t out[MD5_HASH_SIZE];
     #pragma unroll
     for (int i = 0; i < 4; i++) {
         out[i]      = (a0 >> (8 * i)) & 0xff;
@@ -177,11 +181,44 @@ __global__ void md5_kernel_variable_length(
     }
 
     if(!(*out) && !(*(out + 1)) && *(out + 2) < (uint8_t)16){
-        *(valid_flags + idx) = true;
+        
+        lock(mutex);
+
+        for(int j = 0; j < 8; j++){
+
+            // Insert value into p1_a in the correct position based on indexes
+            if((*p1_a).ans[j].index == -1){
+                (*p1_a).ans[j].index = idx + start_index;
+                (*p1_a).ans[j].value = *(out + 2);
+                break;
+            }else if((*p1_a).ans[j].index > (idx + start_index)){
+                POS temp1 = POS{*(out + 2), static_cast<int32_t>(idx + start_index)};
+                POS temp2 = (*p1_a).ans[j];
+                do{
+                    (*p1_a).ans[j] = temp1;
+                    temp1 = temp2;
+                    temp2 = (*p1_a).ans[j + 1 < 8 ? j + 1 : 7];
+                    j++;
+                } while (j < 8);
+                break;
+            }
+ 
+
+        }
+
+        // Insert into correct indexes in p2
+        if(*(out + 2) < 8 && ((*p2_a).ans[*(out + 2)].index == -1 || (*p2_a).ans[*(out + 2)].index > (idx + start_index))){
+            (*p2_a).ans[*(out + 2)].index = idx + start_index;
+            (*p2_a).ans[*(out + 2)].value = *(out + 3) >> 4;
+        }
+
+
+        unlock(mutex);
     }
 
 }
 
+// Print md5 hash as a byte string
 std::string md5_bytes_to_hex_string(const uint8_t* digest, size_t length = 16) {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
@@ -191,81 +228,101 @@ std::string md5_bytes_to_hex_string(const uint8_t* digest, size_t length = 16) {
     return oss.str();
 }
 
-void md5(const str& input, str& p1, str& p2) {
-    constexpr int num_inputs = 30000000;
+std::pair<std::string, std::string> md5(const str& input) {
+    // Batch size
+    constexpr int num_inputs = 5000000;
     int starting_index = 0;
 
-    std::cout<<"MAPPING TO DEVICE MEMORY\n";
-
-    // Map data into device memory
+    // Pointer device memory to hold input string
     uint8_t* d_input_str;
-    uint8_t* d_output_hashes;
-    bool* d_valid_flags;
 
+    int* d_mutex;
+
+    // Output on host memory and pointers to output in device memory
     ANS p1_ans, p2_ans;
+    ANS* d_p1_ans;
+    ANS* d_p2_ans;
 
-    
+    // Initialise output values
+    for(int i = 0; i < 8; i++){
+        p1_ans.ans[i].index = -1;
+        p2_ans.ans[i].index = -1;
+        p1_ans.ans[i].value = 0;
+        p2_ans.ans[i].value = 0;
+    }
+
+    // Allocate required memory
+    cudaMalloc(&d_mutex, sizeof(int));
     cudaMalloc(&d_input_str, input.size);
-    cudaMalloc(&d_output_hashes, num_inputs * MD5_HASH_SIZE);
-    cudaMalloc(&d_valid_flags, num_inputs * sizeof(bool));
+    cudaMalloc(&d_p1_ans, sizeof(ANS));
+    cudaMalloc(&d_p2_ans, sizeof(ANS));
 
+    // Copy data to device
     cudaMemcpy(d_input_str, input.data, input.size, cudaMemcpyHostToDevice);
-    cudaMemset(d_valid_flags, 0, num_inputs * sizeof(bool));
+    cudaMemcpy(d_p1_ans, &p1_ans, sizeof(ANS), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_p2_ans, &p2_ans, sizeof(ANS), cudaMemcpyHostToDevice);
 
-    std::cout<<"LAUNCHING KERNEL\n";
+    bool done = false;
 
-    // Launch kernel
-    int blockSize = 256;
-    int numBlocks = (num_inputs + blockSize - 1) / blockSize;
-    md5_kernel_variable_length<<<numBlocks, blockSize>>>(
-        d_input_str,
-        input.size,
-        starting_index,
-        d_output_hashes,
-        num_inputs,
-        d_valid_flags
-    );
+    int blockSize;   // The launch configurator returned block size
+    int minGridSize; // The minimum grid size needed to achieve the maximum occupancy
+    int gridSize;    // The actual grid size needed, based on input size
 
-    cudaDeviceSynchronize();
+    // Calculate best block size and grid size
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, md5_kernel, 0, 0);
 
-    std::cout<<"COPYING OUTPUT HASHES BACK TO HOST\n";
+    gridSize = (num_inputs + blockSize - 1) / blockSize;
 
-    // Copy output hashes back to host
-    std::vector<uint8_t> output_hashes(num_inputs * MD5_HASH_SIZE);
-    cudaMemcpy(output_hashes.data(), d_output_hashes, output_hashes.size(), cudaMemcpyDeviceToHost);
+    do{
+        // Launch kernel
+        md5_kernel<<<gridSize, blockSize>>>(
+            d_input_str,
+            input.size,
+            starting_index,
+            d_p1_ans,
+            d_p2_ans,
+            num_inputs,
+            d_mutex
+        );
 
-    std::vector<uint8_t> valid_flags(num_inputs);
-    cudaMemcpy(valid_flags.data(), d_valid_flags, valid_flags.size(), cudaMemcpyDeviceToHost);
+        // Wait for device to finish
+        cudaDeviceSynchronize();
 
-    std::cout<<"FREEING DEVICE MEMORY\n";
+        // Copy answers back to host memory
+        cudaMemcpy(&p1_ans, d_p1_ans, sizeof(ANS), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&p2_ans, d_p2_ans, sizeof(ANS), cudaMemcpyDeviceToHost);
+
+        starting_index += num_inputs;
+
+        // Check if answers have been found
+        done = true;
+        for(int i = 0; i < 8; i++){
+            if(p1_ans.ans[i].index == -1 || p2_ans.ans[i].index == -1){
+                done = false;
+                break;
+            }
+        }
+
+
+    }while(!done);
 
     // Free device memory
-    cudaFree(d_output_hashes);
     cudaFree(d_input_str);
-    cudaFree(d_valid_flags);
+    cudaFree(d_p1_ans);
+    cudaFree(d_p2_ans);
+    cudaFree(d_mutex);
 
-    std::cout<<"DEVICE MEMORY FREED\n";
+    // Read out p1 answer
+    std::string p1_str = "";
+    for(int i = 0; i < 8; i++){
+        p1_str += p1_ans.ans[i].value < 10 ? std::to_string(p1_ans.ans[i].value) : std::string(1, 'a' + (p1_ans.ans[i].value - 10));
+    }
 
-    // Process output_hashes to produce final results
-    std::string p1_str = md5_bytes_to_hex_string((uint8_t*)output_hashes.data());            // first hash
-    std::string p2_str = md5_bytes_to_hex_string((uint8_t*)output_hashes.data() + 16);       // second hash
+    // Read out p2 answer
+    std::string p2_str = "";
+    for(int i = 0; i < 8; i++){
+        p2_str += p2_ans.ans[i].value < 10 ? std::to_string(p2_ans.ans[i].value) : std::string(1, 'a' + (p2_ans.ans[i].value - 10));
+    }
 
-
-    //for(int i = 0; i < output_hashes.size(); i += 16){
-        //if(!(*(output_hashes.data() + i)) && !(*(output_hashes.data() + i + 1)) && *(output_hashes.data() + i + 2) < (uint8_t)16){
-        //    std::cout << "\tFound matching hash: " << md5_bytes_to_hex_string((uint8_t*)output_hashes.data() + i) << '\n';
-        //}
-    //}
-     for(int i = 0; i < valid_flags.size(); i++){
-
-         if(valid_flags[i]){
-             std::cout << "\tFound matching hash: " << md5_bytes_to_hex_string((uint8_t*)output_hashes.data() + i * MD5_HASH_SIZE) << '\n';
-         }
-
-     }
-
-
-    p1.init(p1_str.c_str(), p1_str.size());
-    p2.init(p2_str.c_str(), p2_str.size());
-
+    return {p1_str, p2_str};
 }
