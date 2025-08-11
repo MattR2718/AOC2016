@@ -8,6 +8,7 @@ include(FetchContent)
 
 add_executable(day5 day5.cpp)
 if(OpenSSL_FOUND)
+  target_compile_definitions(day5 PRIVATE HAVE_OPENSSL=1)
   target_link_libraries(day5 PRIVATE ctre OpenSSL::SSL OpenSSL::Crypto)
 else()
   target_link_libraries(day5 PRIVATE ctre cryptopp::cryptopp)
