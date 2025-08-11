@@ -11,43 +11,19 @@
 
 #include <ctre.hpp>
 
+#ifdef HAVE_OPENSSL
+  #include <openssl/md5.h>
+#else
+  #include <cryptopp/hex.h>
+  #include <cryptopp/filters.h>
+  #include <cryptopp/md5.h>
+#endif // HAVE_OPENSSL
 
-#include <cryptopp/hex.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/md5.h>
 
-#include <openssl/md5.h>
 #include <sstream>
 #include <iomanip>
 
-// std::string md5(const std::string& input) {
-//     CryptoPP::MD5 hash;
-//     std::string digest;
-
-//     CryptoPP::StringSource ss(input, true,
-//         new CryptoPP::HashFilter(hash,
-//             new CryptoPP::HexEncoder(
-//                 new CryptoPP::StringSink(digest), false)));
-//     return digest;
-// }
-
-
-// std::string md5(const std::string& input) {
-//     CryptoPP::MD5 hash;
-//     CryptoPP::byte digest[CryptoPP::MD5::DIGESTSIZE];
-    
-//     hash.CalculateDigest(digest, reinterpret_cast<const CryptoPP::byte*>(input.data()), input.size());
-
-//     std::string output;
-//     output.reserve(CryptoPP::MD5::DIGESTSIZE * 2); // hex string is double the digest size
-
-//     CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(output), false);
-//     encoder.Put(digest, sizeof(digest));
-//     encoder.MessageEnd();
-
-//     return output;
-// }
-
+#ifdef HAVE_OPENSSL
 std::string md5(const std::string& input) {
     unsigned char digest[MD5_DIGEST_LENGTH];
 
@@ -62,6 +38,38 @@ std::string md5(const std::string& input) {
     }
     return oss.str();
 }
+
+#else
+
+// std::string md5(const std::string& input) {
+//     CryptoPP::MD5 hash;
+//     std::string digest;
+
+//     CryptoPP::StringSource ss(input, true,
+//         new CryptoPP::HashFilter(hash,
+//             new CryptoPP::HexEncoder(
+//                 new CryptoPP::StringSink(digest), false)));
+//     return digest;
+// }
+
+
+std::string md5(const std::string& input) {
+    CryptoPP::MD5 hash;
+    CryptoPP::byte digest[CryptoPP::MD5::DIGESTSIZE];
+ 
+    hash.CalculateDigest(digest, reinterpret_cast<const CryptoPP::byte*>(input.data()), input.size());
+
+    std::string output;
+    output.reserve(CryptoPP::MD5::DIGESTSIZE * 2); // hex string is double the digest size
+
+    CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(output), false);
+    encoder.Put(digest, sizeof(digest));
+    encoder.MessageEnd();
+
+    return output;
+}
+
+#endif // HAVE_OPENSSL
 
 
 int main() {
@@ -78,8 +86,9 @@ int main() {
         auto len = sprintf(numbuf, "%d", index);
         return linetxt + std::string(numbuf, len);
     };
-
-    constexpr int num_threads = 12;
+    
+    static unsigned int num_threads = std::thread::hardware_concurrency();
+    std::cout<<"Running on " << num_threads << " threads\n";
     constexpr int max_index   = INT_MAX;
 
     std::atomic<int> p2c_a = 0;

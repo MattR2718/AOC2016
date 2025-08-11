@@ -47,15 +47,34 @@ endif()
 
 
 
-find_package(OpenSSL REQUIRED)
+# Try to find OpenSSL first
+find_package(OpenSSL QUIET)
+
+if(OpenSSL_FOUND)
+    message(STATUS "Found OpenSSL: ${OPENSSL_VERSION}")
+    target_compile_definitions(AOC2016 PRIVATE HAVE_OPENSSL=1)
+else()
+    message(WARNING "OpenSSL not found — falling back to Crypto++")
+
+    FetchContent_Declare(
+        cryptopp_cmake_modern
+        GIT_REPOSITORY https://github.com/abdes/cryptopp-cmake.git
+        GIT_TAG        master  # Or specific release tag
+    )
+
+    # Prevent building tests and extras
+    set(CRYPTOPP_BUILD_TESTING OFF CACHE BOOL "Disable Crypto++ tests" FORCE)
+    set(CRYPTOPP_BUILD_EXAMPLES OFF CACHE BOOL "Disable Crypto++ examples" FORCE)
+    set(CRYPTOPP_BUILD_DOCUMENTATION OFF CACHE BOOL "Disable Crypto++ docs" FORCE)
+
+    FetchContent_MakeAvailable(cryptopp_cmake_modern)
+endif()
 
 
-# Copy inputs folder to ${CMAKE_BINARY_DIR}/inputs
-# Copy every time project is built, even if there are no code changes
-#file(COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/inputs)
+
 
 add_subdirectory(day1)
-add_subdirectory(day2)
+#add_subdirectory(day2)
 add_subdirectory(day3)
 add_subdirectory(day4)
 add_subdirectory(day5)
