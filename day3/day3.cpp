@@ -20,8 +20,8 @@ int main() {
     while(std::getline(std::cin, linetxt)){
       auto match = ctre::match<"\\s*(\\d+)\\s+(\\d+)\\s+(\\d+)">(linetxt);
       if(match){
-        std::vector<int> nums{ std::stoi(match.get<1>().to_string()), std::stoi(match.get<2>().to_string()), std::stoi(match.get<3>().to_string()) };
-        
+        std::vector<int> nums{ match.get<1>().to_number<int>(), match.get<2>().to_number<int>(), match.get<3>().to_number<int>() };
+
         nums21.push_back(nums[0]);
         nums22.push_back(nums[1]);
         nums23.push_back(nums[2]);

@@ -12,7 +12,7 @@ include(FetchContent)
 FetchContent_Declare(
         ctre
         GIT_REPOSITORY https://github.com/hanickadot/compile-time-regular-expressions.git
-        GIT_TAG        master
+        GIT_TAG        origin/main
 )
 FetchContent_MakeAvailable(ctre)
 
@@ -47,15 +47,17 @@ endif()
 
 
 
-
+find_package(OpenSSL REQUIRED)
 
 
 # Copy inputs folder to ${CMAKE_BINARY_DIR}/inputs
 # Copy every time project is built, even if there are no code changes
-file(COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/inputs)
+#file(COPY inputs DESTINATION ${CMAKE_BINARY_DIR}/inputs)
 
 add_subdirectory(day1)
 add_subdirectory(day2)
 add_subdirectory(day3)
 add_subdirectory(day4)
 add_subdirectory(day5)
+add_subdirectory(day6)
+add_subdirectory(day7)

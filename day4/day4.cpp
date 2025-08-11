@@ -25,7 +25,7 @@ int main() {
         // Remove all - from the string
         name.erase(std::remove(name.begin(), name.end(), '-'), name.end());
 
-        int id = std::stoi(match.get<2>().to_string());
+        int id = match.get<2>().to_number<int>();
         std::string checksum = match.get<3>().to_string();
 
         //std::cout << "Name: " << name << ", ID: " << id << ", Checksum: " << checksum << "\n";

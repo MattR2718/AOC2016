@@ -11,14 +11,14 @@ int main() {
     bool p2_done{false};
     while(std::getline(std::cin, linetxt)){
         // Get directions in the from ([LR])(\\d+) using ctre
-        for (auto match: ctre::range<"([LR])(\\d+)">(linetxt)){
+        for (auto match: ctre::search_all<"([LR])(\\d+)">(linetxt)){
             if (match.get<1>() == "L") {
                 dir = (dir + 3) % 4; // Turn left
             } else if (match.get<1>() == "R") {
                 dir = (dir + 1) % 4; // Turn right
             }
 
-            int steps = std::stoi(match.get<2>().to_string());
+            int steps = match.get<2>().to_number<int>();
 
             if(!p2_done){
                 for(int i = 0; i < steps; i++){

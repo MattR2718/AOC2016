@@ -18,4 +18,4 @@ FetchContent_MakeAvailable(cryptopp_cmake_modern)
 
 
 add_executable(day5 day5.cpp)
-target_link_libraries(day5 PRIVATE ctre mdspan cryptopp::cryptopp)
+target_link_libraries(day5 PRIVATE ctre mdspan cryptopp::cryptopp OpenSSL::SSL OpenSSL::Crypto)

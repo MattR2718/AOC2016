@@ -16,6 +16,9 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/md5.h>
 
+#include <openssl/md5.h>
+#include <sstream>
+#include <iomanip>
 
 // std::string md5(const std::string& input) {
 //     CryptoPP::MD5 hash;
@@ -29,20 +32,35 @@
 // }
 
 
-std::string md5(const std::string& input) {
-    CryptoPP::MD5 hash;
-    CryptoPP::byte digest[CryptoPP::MD5::DIGESTSIZE];
+// std::string md5(const std::string& input) {
+//     CryptoPP::MD5 hash;
+//     CryptoPP::byte digest[CryptoPP::MD5::DIGESTSIZE];
     
-    hash.CalculateDigest(digest, reinterpret_cast<const CryptoPP::byte*>(input.data()), input.size());
+//     hash.CalculateDigest(digest, reinterpret_cast<const CryptoPP::byte*>(input.data()), input.size());
 
-    std::string output;
-    output.reserve(CryptoPP::MD5::DIGESTSIZE * 2); // hex string is double the digest size
+//     std::string output;
+//     output.reserve(CryptoPP::MD5::DIGESTSIZE * 2); // hex string is double the digest size
 
-    CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(output), false);
-    encoder.Put(digest, sizeof(digest));
-    encoder.MessageEnd();
+//     CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(output), false);
+//     encoder.Put(digest, sizeof(digest));
+//     encoder.MessageEnd();
 
-    return output;
+//     return output;
+// }
+
+std::string md5(const std::string& input) {
+    unsigned char digest[MD5_DIGEST_LENGTH];
+
+    // Compute MD5 hash
+    MD5(reinterpret_cast<const unsigned char*>(input.data()), input.size(), digest);
+
+    // Convert digest to hex string
+    std::ostringstream oss;
+    oss << std::hex << std::setfill('0');
+    for (int i = 0; i < MD5_DIGEST_LENGTH; ++i) {
+        oss << std::setw(2) << static_cast<int>(digest[i]);
+    }
+    return oss.str();
 }
 
 

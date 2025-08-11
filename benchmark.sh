@@ -23,8 +23,8 @@ fi
 
 # Run hyperfine with warmup, pinned CPU, and export results
 hyperfine \
-    --warmup 100 \
+    --warmup 20 \
     -N \
-    --runs 100 \
+    --runs 20 \
     --export-json "benchmarks/benchmark_${EXE}.json" \
     "./build/$EXE/$EXE < $INPUT"
