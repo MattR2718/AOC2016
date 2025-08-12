@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <cstring>
 
 struct str{
     char* data;
@@ -14,7 +15,7 @@ struct str{
 
     void init(const char* input, size_t length) {
         data = new char[length];
-        memcpy(data, input, length);
+	    std::memcpy(data, input, length);
         size = length;
     }
 };

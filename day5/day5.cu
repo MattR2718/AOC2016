@@ -271,6 +271,10 @@ std::pair<std::string, std::string> md5(const str& input) {
     // Calculate best block size and grid size
     cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, md5_kernel, 0, 0);
 
+    if(blockSize == 0){
+        blockSize = 256; // Fallback to a default block size
+    }
+
     gridSize = (num_inputs + blockSize - 1) / blockSize;
 
     do{
@@ -284,6 +288,13 @@ std::pair<std::string, std::string> md5(const str& input) {
             num_inputs,
             d_mutex
         );
+
+        // Check for errors in kernel launch
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
+            break;
+        }
 
         // Wait for device to finish
         cudaDeviceSynchronize();

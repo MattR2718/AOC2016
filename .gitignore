@@ -1,6 +1,7 @@
 # Ignore build and inputs folders
 build/
 inputs/
+input/
 
 # Ignore common C++ build artifacts
 *.o
