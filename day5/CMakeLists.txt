@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.20)
-project(day5CUDA LANGUAGES CXX CUDA)
 
 include(FetchContent)
 
@@ -7,6 +6,7 @@ include(FetchContent)
 find_package(CUDA)
 
 if(CUDA_FOUND)
+    project(day5CUDA LANGUAGES CXX CUDA)
     message(STATUS "CUDA found! Enabling CUDA support.")
     enable_language(CUDA)
     set(CMAKE_CUDA_STANDARD 20)
