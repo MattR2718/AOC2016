@@ -70,7 +70,18 @@ else()
     FetchContent_MakeAvailable(cryptopp_cmake_modern)
 endif()
 
+# Get Boost headers from GitHub
+FetchContent_Declare(
+  boost
+  GIT_REPOSITORY https://github.com/boostorg/boost.git
+  GIT_TAG boost-1.86.0  # choose a specific version
+)
 
+# Only bring in the bimap and dependencies (header-only parts)
+set(BOOST_INCLUDE_LIBRARIES bimap config core detail mpl preprocessor static_assert type_traits)
+set(BOOST_ENABLE_CMAKE ON)
+
+FetchContent_MakeAvailable(boost)
 
 
 add_subdirectory(day1)
@@ -83,3 +94,4 @@ add_subdirectory(day7)
 add_subdirectory(day8)
 add_subdirectory(day9)
 add_subdirectory(day10)
+add_subdirectory(day11)
