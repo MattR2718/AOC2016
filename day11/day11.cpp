@@ -2,9 +2,12 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <unordered_set>
 
 #include <ctre.hpp>
 #include <boost/bimap.hpp>
+
+#define PRINT 0
 
 enum class ItemType{
     Microchip,
@@ -14,229 +17,18 @@ enum class ItemType{
 struct Item{
     ItemType type;
     int id;
+    int floor;
 
     std::string get_name(const boost::bimap<std::string, int>& name_to_id) const {
         return name_to_id.right.at(id);
     }
+
 };
 
 bool operator==(const Item& a, const Item& b) {
-    return a.type == b.type && a.id == b.id;
+    bool same_type_and_id = a.type == b.type && a.id == b.id;
+    return same_type_and_id && a.floor == b.floor;
 }
-
-struct State {
-    std::vector<std::vector<Item>> floors;
-    int elevator_position;
-
-    bool valid_floor(std::vector<Item> floor) const {
-        // Check for invalid item combinations
-        std::vector<int> microchips;
-        std::vector<int> generators;
-
-        for (const auto& item : floor) {
-            if (item.type == ItemType::Microchip) {
-                microchips.push_back(item.id);
-            } else {
-                generators.push_back(item.id);
-            }
-        }
-
-        // If there are no generators, the floor is valid
-        if (generators.empty()) {
-            return true;
-        }
-
-        // Check if all microchips have a corresponding generator
-        for (const auto& chip : microchips) {
-            if (std::find(generators.begin(), generators.end(), chip) == generators.end()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    bool is_valid() const {
-        for (const auto& floor : floors) {
-            if (!valid_floor(floor)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /*
-    std::vector<State> generate_next_states() const {
-        std::vector<State> next_states;
-
-        // Generate all possible moves
-        for (int i = 0; i < floors.size(); ++i) {
-            if (i == elevator_position) {
-                // Generate moves for the current floor
-                for (int j = 0; j < floors[i].size(); ++j) {
-                    // Move item down one floor
-                    if (i > 0) {
-                        State new_state{this->floors, this->elevator_position};
-                        new_state.floors[i].erase(new_state.floors[i].begin() + j);
-                        new_state.floors[i - 1].push_back(floors[i][j]);
-                        new_state.elevator_position--;
-                        if (new_state.is_valid()) {
-                            next_states.push_back(new_state);
-                        }
-                    }
-                }
-
-                for (int j = 0; j < floors[i].size(); ++j) {
-                    // Move item up one floor
-                    if (i < floors.size() - 1) {
-                        State new_state{this->floors, this->elevator_position};
-                        new_state.floors[i].erase(new_state.floors[i].begin() + j);
-                        new_state.floors[i + 1].push_back(floors[i][j]);
-                        new_state.elevator_position++;
-                        if (new_state.is_valid()) {
-                            next_states.push_back(new_state);
-                        }
-                    }
-                }
-
-                // Move two items up one floor
-                for (int j = 0; j < floors[i].size(); ++j) {
-                    for (int k = j + 1; k < floors[i].size(); ++k) {
-                        if (i < floors.size() - 1) {
-                            State new_state{this->floors, this->elevator_position};
-                            new_state.floors[i].erase(new_state.floors[i].begin() + k);
-                            new_state.floors[i].erase(new_state.floors[i].begin() + j);
-                            new_state.floors[i + 1].push_back(floors[i][j]);
-                            new_state.floors[i + 1].push_back(floors[i][k]);
-                            new_state.elevator_position++;
-                            if (new_state.is_valid()) {
-                                next_states.push_back(new_state);
-                            }
-                        }
-                    }
-                }
-
-                // Move two items down one floor
-                for (int j = 0; j < floors[i].size(); ++j) {
-                    for (int k = j + 1; k < floors[i].size(); ++k) {
-                        if (i > 0) {
-                            State new_state{this->floors, this->elevator_position};
-                            new_state.floors[i].erase(new_state.floors[i].begin() + k);
-                            new_state.floors[i].erase(new_state.floors[i].begin() + j);
-                            new_state.floors[i - 1].push_back(floors[i][j]);
-                            new_state.floors[i - 1].push_back(floors[i][k]);
-                            new_state.elevator_position--;
-                            if (new_state.is_valid()) {
-                                next_states.push_back(new_state);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return next_states;
-    }
-
-    */
-
-    std::vector<State> generate_next_states() const {
-        std::vector<State> next_states;
-
-        // Get the items on the current elevator floor
-        const auto& items = floors[elevator_position];
-        int floor_idx = elevator_position;
-
-        // Helper lambda to try moving selected items to a target floor
-        auto try_move = [&](const std::vector<int>& indices, int target_floor) {
-            State new_state{floors, elevator_position};
-
-            // To erase multiple indices safely, sort in descending order
-            std::vector<int> sorted_indices = indices;
-            std::sort(sorted_indices.rbegin(), sorted_indices.rend());
-
-            // Remove items from current floor
-            for (int idx : sorted_indices) {
-                new_state.floors[floor_idx].erase(new_state.floors[floor_idx].begin() + idx);
-            }
-            // Add items to target floor
-            for (int idx : indices) {
-                new_state.floors[target_floor].push_back(items[idx]);
-            }
-
-            new_state.elevator_position = target_floor;
-
-            if (new_state.is_valid()) {
-                next_states.push_back(std::move(new_state));
-            }
-        };
-
-        // Generate all 1-item moves
-        for (int i = 0; i < (int)items.size(); ++i) {
-            if (floor_idx > 0) try_move({i}, floor_idx - 1);
-            if (floor_idx < (int)floors.size() - 1) try_move({i}, floor_idx + 1);
-        }
-
-        // Generate all 2-item moves (combinations of two different items)
-        for (int i = 0; i < (int)items.size(); ++i) {
-            for (int j = i + 1; j < (int)items.size(); ++j) {
-                if (floor_idx > 0) try_move({i, j}, floor_idx - 1);
-                if (floor_idx < (int)floors.size() - 1) try_move({i, j}, floor_idx + 1);
-            }
-        }
-
-        // sort every floor of every state to make permutations easier to detect
-        for (auto& state : next_states) {
-            for (auto& floor : state.floors) {
-                std::sort(floor.begin(), floor.end(), [](const Item& a, const Item& b) {
-                    return a.id < b.id;
-                });
-            }
-        }
-
-        return next_states;
-    }
-
-    bool final_state() const {
-        // Check if all items are on the top floor
-        for (int i = 0; i < floors.size() - 1; ++i) {
-            if (!floors[i].empty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-
-    void print_state(const boost::bimap<std::string, int>& name_to_id) const {
-        std::cout << "Elevator is on floor " << elevator_position << "\n";
-        for (int i = floors.size() - 1; i >= 0; i--) {
-            std::cout << "Floor " << i << ": ";
-            for (const auto& item : floors[i]) {
-                std::cout << "[" << item.get_name(name_to_id) << " " << (item.type == ItemType::Microchip ? "M" : "G") << "] ";
-            }
-            std::cout << "\n";
-        }
-    }
-
-};
-
-bool operator==(const State& a, const State& b) {
-    return a.elevator_position == b.elevator_position &&
-           a.floors == b.floors;
-}
-
-struct StateHash{
-    size_t operator()(const State& state) const {
-        size_t hash = std::hash<int>()(state.elevator_position);
-        for (const auto& floor : state.floors) {
-            for (const auto& item : floor) {
-                hash ^= std::hash<int>()(item.id) ^ std::hash<int>()(static_cast<int>(item.type));
-            }
-        }
-        return hash;
-    }
-};
 
 
 int get_from_bimap(const boost::bimap<std::string, int>& name_to_id, const std::string& name) {
@@ -244,7 +36,7 @@ int get_from_bimap(const boost::bimap<std::string, int>& name_to_id, const std::
     if (it != name_to_id.left.end()) {
         return it->second;
     }
-    return -1; // Not found
+    return -1;
 }
 
 std::string get_name_from_bimap(const boost::bimap<std::string, int>& name_to_id, int id) {
@@ -252,7 +44,7 @@ std::string get_name_from_bimap(const boost::bimap<std::string, int>& name_to_id
     if (it != name_to_id.right.end()) {
         return it->second;
     }
-    return ""; // Not found
+    return "";
 }
 
 bool in_bimap(const boost::bimap<std::string, int>& name_to_id, const std::string& name) {
@@ -263,26 +55,160 @@ bool in_bimap(const boost::bimap<std::string, int>& name_to_id, int id) {
     return name_to_id.right.find(id) != name_to_id.right.end();
 }
 
+struct State{
+    std::vector<Item> items;
+    int elevator_position;
+    const boost::bimap<std::string, int>* name_to_id;
 
-// Generate all possible states that the floors can be in
-std::vector<std::vector<std::vector<Item>>> generate_all_states(const std::vector<std::vector<Item>>& current_state, int elevator_position) {
-    std::vector<std::vector<std::vector<Item>>> all_states;
-
-    // Move every item individually up one floor
-    for (int i = 0; i < current_state.size() - 1; ++i) {
-        for(int j = 0; j < current_state[i].size(); j++){
-            std::vector<std::vector<Item>> new_state;
-        }
-
-        
+    bool operator==(const State& other) const {
+        return items == other.items && elevator_position == other.elevator_position;
     }
 
-    return all_states;
+    void print() const {
+        std::cout<<"--------------------------------------------------------\n";
+        std::cout << "Elevator Position: " << elevator_position << "\n";
+        auto items__sorted = items;
+        std::ranges::sort(items__sorted, [](const Item& a, const Item& b) {
+            return a.floor > b.floor || (a.floor == b.floor && a.id < b.id);
+        });
+        for (const auto& item : items__sorted) {
+            std::cout << "Floor: " << item.floor << " " << item.get_name(*name_to_id) << (item.type == ItemType::Microchip ? " Microchip" : " Generator") << "\n";
+        }
+        std::cout<<"--------------------------------------------------------\n";
+
+    }
+
+    bool is_valid() const {
+        // Check if the state is valid (no microchip is left with an incompatible generator)
+        for (const auto& item : items) {
+            if (item.type == ItemType::Microchip) {
+                bool has_compatible_generator = false;
+                int num_generators_on_floor = 0;
+                for(const auto& item2 : items){
+
+                    if(item2.type == ItemType::Generator && item2.id == item.id && item2.floor == item.floor){
+                        has_compatible_generator = true;
+                    }
+                    if(item2.type == ItemType::Generator && item2.floor == item.floor){
+                        num_generators_on_floor++;
+                    }
+                }
+                if(!has_compatible_generator && num_generators_on_floor > 0) {
+#if PRINT
+                    std::cout<<"Invalid state due to missing compatible generator for microchip "<<item.get_name(*name_to_id)<<"\n";
+                    print();
+#endif
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
+    std::vector<State> next_states(){
+        std::vector<State> states;
+
+        for (int i = 0; i < items.size(); i++) {
+            if(items[i].floor != elevator_position) {
+                continue;
+            }
+            for (int direction : {-1, 1}) {
+                int new_floor = elevator_position + direction;
+                if (new_floor >= 0 && new_floor < 4) {
+                    State new_state{this->items, new_floor, this->name_to_id};
+                    new_state.items[i].floor = new_floor;
+                    if(new_state.is_valid()){
+                        states.push_back(new_state);
+                    }
+                }
+            }
+        }
+
+        // Generate all pairs of items
+        for (int i = 0; i < items.size(); ++i) {
+            for (int j = i + 1; j < items.size(); ++j) {
+                if(items[i].floor == items[j].floor && items[i].floor == elevator_position){
+                    for (int direction : {-1, 1}) {
+                        int new_floor = elevator_position + direction;
+                        if (new_floor >= 0 && new_floor < 4) {
+                            State new_state{this->items, new_floor, this->name_to_id};
+                            new_state.items[i].floor = new_floor;
+                            new_state.items[j].floor = new_floor;
+                            if(new_state.is_valid()){
+                                states.push_back(new_state);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+#if PRINT
+        std::cout<<"Generated "<<states.size()<<" new states.\n";
+#endif
+        return states;
+    }
+
+    bool is_goal(){
+        return std::all_of(items.begin(), items.end(), [](const Item& item) {
+            return item.floor == 3;
+        });
+    }
+
+};
+
+
+struct StateHash {
+    std::size_t operator()(const State& s) const noexcept {
+        std::size_t h = std::hash<int>{}(s.elevator_position);
+
+        for (const auto& item : s.items) {
+            // Hash each part of the Item
+            std::size_t item_hash = 0;
+            hash_combine(item_hash, std::hash<int>{}(item.floor));
+            hash_combine(item_hash, std::hash<int>{}(item.id));
+            hash_combine(item_hash, std::hash<int>{}(static_cast<int>(item.type)));
+
+            // Mix it into the State's hash
+            hash_combine(h, item_hash);
+        }
+        return h;
+    }
+
+private:
+    template <typename T>
+    static void hash_combine(std::size_t& seed, const T& value) {
+        seed ^= std::hash<T>{}(value) + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
+    }
+};
+
+
+int bfs(State initial_state){
+    std::queue<std::pair<State, int>> queue;
+    std::unordered_set<State, StateHash> visited;
+
+    queue.push({initial_state, 0});
+    visited.insert(initial_state);
+
+    while (!queue.empty()) {
+        State current = queue.front().first;
+        int steps = queue.front().second;
+        queue.pop();
+
+        if (current.is_goal()) {
+            return steps;
+            break;
+        }
+
+        for (const auto& next : current.next_states()) {
+            if (visited.find(next) == visited.end()) {
+                visited.insert(next);
+                queue.push({next, steps + 1});
+            }
+        }
+    }
+    return -1;
 }
-
-
-
-
 
 
 
@@ -294,10 +220,10 @@ int main() {
     // id -> name = name_to_id.right(id)
     boost::bimap<std::string, int> name_to_id;
     int id_counter = 0;
-    
-    std::vector<std::vector<Item>> floor_contents;
+    int floor = 0;
+    State initial_state{ {}, 0 };
     while(std::getline(std::cin, linetxt)){
-        std::vector<Item> floor;
+        
         if(auto match = ctre::search<"The [a-zA-Z]+ floor contains nothing relevant.">(linetxt)){
             // Do nothing
         }else {
@@ -305,20 +231,18 @@ int main() {
                 std::string name;
                 if (auto chip = match.get<1>(); chip) {
                     name = chip.to_string();
-                    std::cout << "Found microchip: " << name << "\n";
                     if(in_bimap(name_to_id, name)){
-                        floor.push_back({ItemType::Microchip, get_from_bimap(name_to_id, name)});
+                        initial_state.items.push_back({ItemType::Microchip, get_from_bimap(name_to_id, name), floor});
                     }else{
-                        floor.push_back({ItemType::Microchip, id_counter});
+                        initial_state.items.push_back({ItemType::Microchip, id_counter, floor});
                     }
                     
                 } else if (auto gen = match.get<2>(); gen) {
                     name = gen.to_string();
-                    std::cout << "Found generator: " << name << "\n";
                     if(in_bimap(name_to_id, name)){
-                        floor.push_back({ItemType::Generator, get_from_bimap(name_to_id, name)});
+                        initial_state.items.push_back({ItemType::Generator, get_from_bimap(name_to_id, name), floor});
                     }else{
-                        floor.push_back({ItemType::Generator, id_counter});
+                        initial_state.items.push_back({ItemType::Generator, id_counter, floor});
                     }
                 }
                 if(name_to_id.left.find(name) == name_to_id.left.end()) {
@@ -326,9 +250,11 @@ int main() {
                 }
             }
         }
-        floor_contents.push_back(floor);
+        floor++;
     }
 
+    initial_state.name_to_id = &name_to_id;
+#if PRINT
     for (const auto& [name, id] : name_to_id.left) {
         std::cout << "Name: " << name << ", ID: " << id << "\n";
     }
@@ -337,74 +263,23 @@ int main() {
         std::cout << "ID: " << i << ", Name: " << name_to_id.right.at(i) << "\n";
     }
 
-    //std::cout<<"lithium: " << name_to_id.left.at("lithium") << "\n";
-
-    int floor_counter = 0;
-    for (const auto& floor : floor_contents) {
-        for (const auto& item : floor) {
-            std::cout << "Floor " << floor_counter << ": " << item.get_name(name_to_id) << " " << (item.type == ItemType::Microchip ? "Microchip" : "Generator") << "\n";
-        }
-        floor_counter++;
-    }
-
-
     std::cout<<"\n\n\n\n";
-
-    int elevator_position = 0;
-    State initial_state{floor_contents, elevator_position};
-    //std::queue<std::tuple<State, int, std::vector<State>>> states_to_explore;
-    //states_to_explore.push({initial_state, 0, {initial_state}});
-
-    std::queue<std::tuple<State, int>> states_to_explore;
-    states_to_explore.push({initial_state, 0});
-
-    std::vector<State> visited_states;
-    std::vector<State> state_path;
-    
-
-    while (!states_to_explore.empty()) {
-        if(states_to_explore.size() % 1000 == 0){
-            std::cout<<"States to explore: " << states_to_explore.size() << "  States Visited: " << visited_states.size() << "\n";
-        }
-        State current_state = std::get<0>(states_to_explore.front());
-        int steps = std::get<1>(states_to_explore.front());
-        //std::vector<State> previous_states = std::get<2>(states_to_explore.front());
-
-        // Check if we have already visited this state
-        if (std::find(visited_states.begin(), visited_states.end(), current_state) != visited_states.end()) {
-            states_to_explore.pop();
-            continue;
-        }
-
-        visited_states.push_back(current_state);
-
-        if(current_state.final_state()){
-            p1 = steps;
-            //state_path = previous_states;
-            break;
-        }
-        states_to_explore.pop();
-
-        // Generate next states
-        std::vector<State> next_states = current_state.generate_next_states();
-        for (auto& state : next_states) {
-            //auto new_history = previous_states;
-            //new_history.push_back(state);
-            //states_to_explore.push({state, steps + 1, new_history});
-            states_to_explore.push({state, steps + 1});
-        
-        }
-    }
+    initial_state.print();
+#endif
 
 
-    // std::cout<<"State Path: \n";
-    // for (const auto& state : state_path) {
-    //     std::cout<<"\n";
-    //     state.print_state(name_to_id);
-    //     std::cout<<"\n";
-        
-    // }
-
+    p1 = bfs(initial_state);
     std::cout<<"Part 1: "<< p1 << "\n";
+
+
+    name_to_id.insert({"elerium", id_counter++});
+    name_to_id.insert({"dilithium", id_counter++});
+    initial_state.elevator_position = 0;
+    initial_state.items.push_back({ItemType::Generator, get_from_bimap(name_to_id, "elerium"), 0});
+    initial_state.items.push_back({ItemType::Generator, get_from_bimap(name_to_id, "dilithium"), 0});
+    initial_state.items.push_back({ItemType::Microchip, get_from_bimap(name_to_id, "elerium"), 0});
+    initial_state.items.push_back({ItemType::Microchip, get_from_bimap(name_to_id, "dilithium"), 0});
+
+    p2 = bfs(initial_state);
     std::cout<<"Part 2: "<< p2 << "\n";
 }
