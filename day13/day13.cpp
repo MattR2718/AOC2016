@@ -77,9 +77,7 @@ int bi_bfs(const std::pair<int, int> start_pos, const std::pair<int, int>& goal_
 
 int main() {
     std::string linetxt;
-    std::cout<<"RUNNING\n";
     std::getline(std::cin, linetxt);
-    std::cout<<"["<<linetxt<<"]";
     int f_num = std::stoi(linetxt);
     std::pair<int, int> goal;
     if(f_num == 10){
@@ -91,13 +89,23 @@ int main() {
     std::cout<<"Part 1: " << bi_bfs({1, 1}, goal, f_num) << '\n';
 
     constexpr auto x_pos = std::views::iota(0, 50);
-    auto all_possible_positions = std::views::cartesian_product(x_pos, x_pos) | std::views::filter([&f_num](const auto& pos) {
-        return !wall(pos, f_num);
-    });
+    auto all_possible_positions = std::views::cartesian_product(x_pos, x_pos) 
+                                | std::views::transform([](auto t){ return std::pair{std::get<0>(t), std::get<1>(t)}; })
+                                | std::views::filter([&f_num](const auto& pos) { return !wall(pos, f_num); });
 
-    std::cout<<"Part 2: " << std::reduce(std::execution::par, all_possible_positions.begin(), all_possible_positions.end(), 0, [&](int acc, const auto& pos) {
-        int dist = bi_bfs({1, 1}, pos, f_num) ;
-        return acc + (dist != -1 && dist <= 50 ? 1 : 0);
-    }) << '\n';
+
+    auto p2 = std::transform_reduce(
+        std::execution::par,
+        all_possible_positions.begin(),
+        all_possible_positions.end(),
+        0,
+        std::plus<>{},
+        [&](const std::pair<int, int>& pos) {
+            int dist = bi_bfs({1, 1}, pos, f_num);
+            return (dist != -1 && dist <= 50) ? 1 : 0;
+        }
+    );
+
+    std::cout<<"Part 2: " << p2 << '\n';
 
 }
