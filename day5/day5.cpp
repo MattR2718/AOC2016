@@ -26,21 +26,6 @@
 #include <iomanip>
 
 #ifdef HAVE_OPENSSL
-// std::string md5(const std::string& input) {
-//     unsigned char digest[MD5_DIGEST_LENGTH];
-
-//     // Compute MD5 hash
-//     MD5(reinterpret_cast<const unsigned char*>(input.data()), input.size(), digest);
-
-//     // Convert digest to hex string
-//     std::ostringstream oss;
-//     oss << std::hex << std::setfill('0');
-//     for (int i = 0; i < MD5_DIGEST_LENGTH; ++i) {
-//         oss << std::setw(2) << static_cast<int>(digest[i]);
-//     }
-//     return oss.str();
-// }
-
 uint32_t md5(const std::string& input) {
     unsigned char digest[MD5_DIGEST_LENGTH]; // MD5_DIGEST_LENGTH = 16
     MD5(reinterpret_cast<const unsigned char*>(input.c_str()), input.size(), digest);
@@ -53,32 +38,18 @@ uint32_t md5(const std::string& input) {
 
 #else
 
-// std::string md5(const std::string& input) {
-//     CryptoPP::MD5 hash;
-//     std::string digest;
-
-//     CryptoPP::StringSource ss(input, true,
-//         new CryptoPP::HashFilter(hash,
-//             new CryptoPP::HexEncoder(
-//                 new CryptoPP::StringSink(digest), false)));
-//     return digest;
-// }
-
-
-std::string md5(const std::string& input) {
+uint32_t md5(const std::string& input) {
     CryptoPP::MD5 hash;
-    CryptoPP::byte digest[CryptoPP::MD5::DIGESTSIZE];
- 
+    CryptoPP::byte digest[CryptoPP::MD5::DIGESTSIZE]; // 16 bytes
+
+    // Calculate MD5 hash
     hash.CalculateDigest(digest, reinterpret_cast<const CryptoPP::byte*>(input.data()), input.size());
 
-    std::string output;
-    output.reserve(CryptoPP::MD5::DIGESTSIZE * 2); // hex string is double the digest size
-
-    CryptoPP::HexEncoder encoder(new CryptoPP::StringSink(output), false);
-    encoder.Put(digest, sizeof(digest));
-    encoder.MessageEnd();
-
-    return output;
+    // Convert the first 4 bytes of digest into a uint32_t (big-endian like your OpenSSL code)
+    return (static_cast<uint32_t>(digest[0]) << 24) |
+           (static_cast<uint32_t>(digest[1]) << 16) |
+           (static_cast<uint32_t>(digest[2]) << 8)  |
+           (static_cast<uint32_t>(digest[3]));
 }
 
 #endif // HAVE_OPENSSL
@@ -90,7 +61,7 @@ std::string to_hex_string(uint32_t value) {
     return oss.str();
 }
 
-struct POS{
+struct POS {
     uint8_t value;
     int32_t index;
 };
@@ -108,8 +79,9 @@ int main() {
 
     std::getline(std::cin, linetxt);
 
-    char numbuf[32];
+    
     auto make_hash_input = [&](int index) {
+        char numbuf[32];
         auto len = sprintf(numbuf, "%d", index);
         return linetxt + std::string(numbuf, len);
     };
@@ -142,33 +114,31 @@ int main() {
                 int six = (hash >> 8);
                 int seven = (hash >> 4) & 0xf;
 
-                std::unique_lock<std::mutex> lock(mut);
+                std::lock_guard<std::mutex> lock(mut); // Lock here
 
-                for(int j = 0; j < 8; j++){
-                    if((p1_ans).ans[j].index == -1){
-                        (p1_ans).ans[j].index = i;
-                        (p1_ans).ans[j].value = six;
+                for (int j = 0; j < 8; j++) {
+                    if (p1_ans.ans[j].index == -1) {
+                        p1_ans.ans[j].index = i;
+                        p1_ans.ans[j].value = six;
                         break;
-                    }else if((p1_ans).ans[j].index > (i)){
+                    } else if (p1_ans.ans[j].index > i) {
                         POS temp1 = POS{(uint8_t)six, static_cast<int32_t>(i)};
-                        POS temp2 = (p1_ans).ans[j];
-                        do{
-                            (p1_ans).ans[j] = temp1;
+                        POS temp2 = p1_ans.ans[j];
+                        do {
+                            p1_ans.ans[j] = temp1;
                             temp1 = temp2;
-                            temp2 = (p1_ans).ans[j + 1 < 8 ? j + 1 : 7];
+                            temp2 = p1_ans.ans[j + 1 < 8 ? j + 1 : 7];
                             j++;
                         } while (j < 8);
                         break;
                     }
                 }
 
-                if(six < 8 && (p2_ans).ans[six].index == -1 || (p2_ans).ans[six].value > i) {
-                    (p2_ans).ans[six].index = i;
-                    (p2_ans).ans[six].value = seven;
+                // Update p2_ans safely
+                if (six < 8 && (p2_ans.ans[six].index == -1 || p2_ans.ans[six].index > i)) {
+                    p2_ans.ans[six].index = i;
+                    p2_ans.ans[six].value = seven;
                 }
-
-                lock.unlock();
-
             }
         }
     };
