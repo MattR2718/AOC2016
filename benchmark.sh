@@ -10,7 +10,7 @@ EXE="$1"
 INPUT="$2"
 
 # Verify that executable exists
-if ! command -v "build/$EXE/$EXE" &> /dev/null && [ ! -x "build/$EXE/$EXE" ]; then
+if [ ! -x "build/$EXE/$EXE" ]; then
     echo "Error: 'build/$EXE/$EXE' not found or not executable."
     exit 1
 fi
@@ -21,10 +21,13 @@ if [ ! -f "$INPUT" ]; then
     exit 1
 fi
 
+# Ensure output directory exists
+mkdir -p benchmarks
+
 # Run hyperfine with warmup, pinned CPU, and export results
 hyperfine \
-    --warmup 20 \
-    -N \
+    --warmup 3 \
     --runs 20 \
     --export-json "benchmarks/benchmark_${EXE}.json" \
+    --shell "bash" \
     "./build/$EXE/$EXE < $INPUT"
