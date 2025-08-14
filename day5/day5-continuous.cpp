@@ -9,6 +9,9 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <condition_variable>
+
+
 #include <cstring>
 
 #include <ctre.hpp>
@@ -102,44 +105,52 @@ int main() {
 
 
     int offset = 0;
-    int batch_size = 1000000;
+    int batch_size = 500000;
 
     std::mutex mut;
+    std::atomic<int> global_offset{0};
+    bool done{false};
 
     auto worker = [&](int thread_id) {
-        for (int i = thread_id + offset; i < offset + batch_size; i += num_threads) {
-            uint32_t hash = md5(make_hash_input(i));
+        while(true){
+            int start = global_offset.fetch_add(batch_size);
+            int end = start + batch_size;
 
-            if (!(hash & 0xfffff000)) {
-                int six = (hash >> 8);
-                int seven = (hash >> 4) & 0xf;
+            for (int i = thread_id + start; i < end; i ++) {
+                uint32_t hash = md5(make_hash_input(i));
 
-                std::lock_guard<std::mutex> lock(mut); // Lock here
+                if (!(hash & 0xfffff000)) {
+                    int six = (hash >> 8);
+                    int seven = (hash >> 4) & 0xf;
 
-                for (int j = 0; j < 8; j++) {
-                    if (p1_ans.ans[j].index == -1) {
-                        p1_ans.ans[j].index = i;
-                        p1_ans.ans[j].value = six;
-                        break;
-                    } else if (p1_ans.ans[j].index > i) {
-                        POS temp1 = POS{(uint8_t)six, static_cast<int32_t>(i)};
-                        POS temp2 = p1_ans.ans[j];
-                        do {
-                            p1_ans.ans[j] = temp1;
-                            temp1 = temp2;
-                            temp2 = p1_ans.ans[j + 1 < 8 ? j + 1 : 7];
-                            j++;
-                        } while (j < 8);
-                        break;
+                    std::lock_guard<std::mutex> lock(mut); // Lock here
+
+                    for (int j = 0; j < 8; j++) {
+                        if (p1_ans.ans[j].index == -1) {
+                            p1_ans.ans[j].index = i;
+                            p1_ans.ans[j].value = six;
+                            break;
+                        } else if (p1_ans.ans[j].index > i) {
+                            POS temp1 = POS{(uint8_t)six, static_cast<int32_t>(i)};
+                            POS temp2 = p1_ans.ans[j];
+                            do {
+                                p1_ans.ans[j] = temp1;
+                                temp1 = temp2;
+                                temp2 = p1_ans.ans[j + 1 < 8 ? j + 1 : 7];
+                                j++;
+                            } while (j < 8);
+                            break;
+                        }
+                    }
+
+                    // Update p2_ans safely
+                    if (six < 8 && (p2_ans.ans[six].index == -1 || p2_ans.ans[six].index > i)) {
+                        p2_ans.ans[six].index = i;
+                        p2_ans.ans[six].value = seven;
                     }
                 }
-
-                // Update p2_ans safely
-                if (six < 8 && (p2_ans.ans[six].index == -1 || p2_ans.ans[six].index > i)) {
-                    p2_ans.ans[six].index = i;
-                    p2_ans.ans[six].value = seven;
-                }
             }
+            if(done) break;
         }
     };
 
@@ -147,43 +158,30 @@ int main() {
     std::vector<std::jthread> threads;
     threads.reserve(num_threads);
 
-    bool done = false;
-    do{
-        for (int t = 0; t < num_threads; ++t) {
-            threads.emplace_back(worker, t);
-        }
+    for (int t = 0; t < num_threads; ++t) {
+        threads.emplace_back(worker, t);
+    }
 
-        for (auto &thread : threads) {
-            thread.join();
-        }
+    
+    while(!done){
 
-        threads.clear();
 
-        // Check if answers have been found
-        done = true;
-        for(int i = 0; i < 8; i++){
-            if(p1_ans.ans[i].index == -1 || p2_ans.ans[i].index == -1){
-                done = false;
-                break;
+        {
+            std::lock_guard<std::mutex> g(mut);
+            bool d = true;
+            for (int i = 0; i < 8; ++i) {
+                if (p1_ans.ans[i].index == -1 || p2_ans.ans[i].index == -1) {
+                    d = false;
+                    break;
+                }
             }
+            done = d;
         }
-        // Read out p1 answer
-        std::string p1_str = "";
-        for(int i = 0; i < 8; i++){
-            p1_str += p1_ans.ans[i].value < 10 ? std::to_string(p1_ans.ans[i].value) : std::string(1, 'a' + (p1_ans.ans[i].value - 10));
-        }
+    }
 
-        // Read out p2 answer
-        std::string p2_str = "";
-        for(int i = 0; i < 8; i++){
-            p2_str += p2_ans.ans[i].value < 10 ? std::to_string(p2_ans.ans[i].value) : std::string(1, 'a' + (p2_ans.ans[i].value - 10));
-        }
 
-        offset += batch_size;
+    for (auto &t : threads) t.join();
 
-    } while (!done);
-
-  
 
     // Read out p1 answer
     std::string p1_str = "";

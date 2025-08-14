@@ -20,9 +20,13 @@ endif()
 
 
 add_executable(day5 day5.cpp)
+add_executable(day5-continuous day5-continuous.cpp)
 if(OpenSSL_FOUND)
   target_compile_definitions(day5 PRIVATE HAVE_OPENSSL=1)
   target_link_libraries(day5 PRIVATE ctre OpenSSL::SSL OpenSSL::Crypto)
+  target_compile_definitions(day5-continuous PRIVATE HAVE_OPENSSL=1)
+  target_link_libraries(day5-continuous PRIVATE ctre OpenSSL::SSL OpenSSL::Crypto)
 else()
   target_link_libraries(day5 PRIVATE ctre cryptopp::cryptopp)
+  target_link_libraries(day5-continuous PRIVATE ctre cryptopp::cryptopp)
 endif()
