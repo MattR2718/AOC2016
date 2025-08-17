@@ -12,6 +12,8 @@
 
 #include <ctre.hpp>
 
+#include <timer.h>
+
 inline bool wall(const uint64_t pos, int num){
     uint32_t sum = (pos >> 32)*(pos >> 32) + 3*(pos >> 32) + 2*(pos >> 32)*(pos & 0xFFFFFFFF) + (pos & 0xFFFFFFFF) + (pos & 0xFFFFFFFF)*(pos & 0xFFFFFFFF) + num;
     return std::popcount(sum) % 2;
@@ -27,6 +29,9 @@ struct PairHash {
 };
 
 int main() {
+
+    Timer::ScopedTimer t("Day 13");
+
     std::string linetxt;
     std::getline(std::cin, linetxt);
     int f_num = std::stoi(linetxt);

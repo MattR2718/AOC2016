@@ -83,6 +83,7 @@ set(BOOST_ENABLE_CMAKE ON)
 
 FetchContent_MakeAvailable(boost)
 
+include_directories(${PROJECT_SOURCE_DIR}/common)
 
 add_subdirectory(day1)
 #add_subdirectory(day2)
