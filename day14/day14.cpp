@@ -7,8 +7,7 @@
 #include <timer.h>
 
 int main() {
-
-    Timer::ScopedTimer t("Day 1");
+    Timer::ScopedTimer t("Day 14");
 
     std::string linetxt;
     int dir{0}, x{0}, y{0};

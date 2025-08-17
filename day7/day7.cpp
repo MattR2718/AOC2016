@@ -7,8 +7,11 @@
 #include <vector>
 #include <array>
 
+#include <timer.h>
 
 int main() {
+    Timer::ScopedTimer t("Day 7");
+
     std::string linetxt;
     int p1 = 0;
     int p2 = 0;

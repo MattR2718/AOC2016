@@ -4,6 +4,8 @@
 #include <numeric>
 #include <vector>
 
+#include <timer.h>
+
 #if __has_include(<mdspan>)
   #include <mdspan>
   using std::mdspan;
@@ -18,6 +20,9 @@
 #include <ctre.hpp>
 
 int main() {
+
+    Timer::ScopedTimer t("Day 2");
+
     std::string linetxt;
     std::string p1{""};
     std::string p2{""};

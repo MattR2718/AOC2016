@@ -9,7 +9,11 @@
 
 #include <ctre.hpp>
 
+#include <timer.h>
+
 int main() {
+    Timer::ScopedTimer t("Day 4");
+
     std::string linetxt;
 
     int p1{0}, p2{0};

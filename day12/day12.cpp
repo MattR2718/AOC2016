@@ -3,7 +3,9 @@
 #include <vector>
 #include <map>
 
-#include <ctre.hpp>// 9227731 high
+#include <ctre.hpp>
+
+#include <timer.h>
 
 void run(const std::vector<std::string>& instructions, std::map<std::string, int>& registers){
     for(int i = 0; i < instructions.size(); i++){
@@ -35,6 +37,8 @@ void run(const std::vector<std::string>& instructions, std::map<std::string, int
 }
 
 int main() {
+    Timer::ScopedTimer t("Day 12");
+
     std::string linetxt;
     std::vector<std::string> instructions;
     while(std::getline(std::cin, linetxt)){

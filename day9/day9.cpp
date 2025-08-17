@@ -4,6 +4,8 @@
 
 #include <ctre.hpp>
 
+#include <timer.h>
+
 uint64_t get_length(std::string linetxt, bool p1 = false){
     uint64_t p2 = 0;
     for(int i = 0; i < linetxt.length(); i++){
@@ -25,6 +27,8 @@ uint64_t get_length(std::string linetxt, bool p1 = false){
 }
 
 int main() {
+    Timer::ScopedTimer t("Day 9");
+
     std::string linetxt;
     int p1 = 0;
     uint64_t p2 = 0;

@@ -5,6 +5,8 @@
 
 #include <ctre.hpp>
 
+#include <timer.h>
+
 struct GRID{
     int width, height;
     std::vector<std::vector<char>> cells;
@@ -51,6 +53,8 @@ struct GRID{
 
 
 int main() {
+    Timer::ScopedTimer t("Day 8");
+
     std::string linetxt;
     GRID grid(50, 6);
     while(std::getline(std::cin, linetxt)) {

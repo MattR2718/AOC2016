@@ -25,6 +25,8 @@
 #include <sstream>
 #include <iomanip>
 
+#include <timer.h>
+
 #ifdef HAVE_OPENSSL
 uint32_t md5(const std::string& input) {
     unsigned char digest[MD5_DIGEST_LENGTH]; // MD5_DIGEST_LENGTH = 16
@@ -71,6 +73,8 @@ struct ANS{
 };
 
 int main() {
+    Timer::ScopedTimer t("Day 5");
+
     std::string linetxt;
 
     

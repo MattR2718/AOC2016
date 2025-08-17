@@ -8,6 +8,8 @@
 #include <ctre.hpp>
 #include <boost/bimap.hpp>
 
+#include <timer.h>
+
 #define PRINT 0
 
 enum class ItemType{
@@ -262,6 +264,8 @@ int bi_bfs(State initial_state){
 }
 
 int main() {
+    Timer::ScopedTimer t("Day 11");
+
     std::string linetxt;
     int p1 = 0, p2 = 0;
 

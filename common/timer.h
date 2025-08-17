@@ -154,7 +154,7 @@ namespace Timer{
         ~ScopedTimer() {
             double end = now(mode);
             double elapsed = end - start;
-            std::string modeName = (mode == TimerMode::Global) ? "Wall"
+            std::string modeName = (mode == TimerMode::Global) ? "Global"
                                 : (mode == TimerMode::Process) ? "CPU(Process)"
                                 : "CPU(Thread)";
             std::cout << "[Timer] " << name << " (" << modeName << "): "

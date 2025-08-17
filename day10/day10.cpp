@@ -8,6 +8,8 @@
 
 #include <ctre.hpp>
 
+#include <timer.h>
+
 struct Bot{
     int id = -1;
     int low = -1, high = -1;
@@ -59,6 +61,8 @@ struct Output{
 };
 
 int main(int argc, char** argv) {
+    Timer::ScopedTimer t("Day 10");
+
     std::string linetxt;
     int p1 = 0;
     int p2 = 0;
