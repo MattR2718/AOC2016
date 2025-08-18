@@ -1,56 +1,86 @@
 #include <iostream>
 #include <string>
-#include <set>
+#include <bitset>
+#include <vector>
 
 #include <ctre.hpp>
 
 #include <timer.h>
 
+bool generate_bit(const std::vector<bool>& in, int n){
+    int len = in.size();
+
+    if(n < len) return in[n];
+
+    int v = len;
+    while(v * 2 + 1 <= n){
+        v *= 2;
+        v++;
+    }
+    if(v == n) return 0;
+    return !generate_bit(in, 2 * v - n);
+}
+
+bool generate_bit_it(const std::vector<bool>& in, int n){
+    int len = in.size();
+    bool invert = false;
+
+    while (n >= len) {
+        int v = len;
+        while (v * 2 + 1 <= n) {
+            v = v * 2 + 1;
+        }
+        if (v == n) {
+            return invert;
+        }
+        n = 2 * v - n;
+        invert = !invert;
+    }
+
+    return invert ? !in[n] : in[n];
+}
+
+void ans(const std::vector<bool>& in, int size){
+    std::vector<bool> checksum2(size);
+
+    for(int i = 0; i < size; i++){
+        checksum2[i] = generate_bit_it(in, i);
+    }
+    int l = checksum2.size();
+    while(l % 2 == 0){
+        for(int i = 0; i < l - 1; i += 2){
+            checksum2[i / 2] = checksum2[i] == checksum2[i + 1] ? 1 : 0;
+        }
+        l /= 2;
+    }
+
+    for(int f = 0; f < l; f++){
+        std::cout<<checksum2[f];
+    }
+    std::cout<<'\n';
+}
+
+
 int main() {
 
-    Timer::ScopedTimer t("Day 1");
+    Timer::ScopedTimer t("Day 16");
 
     std::string linetxt;
-    int dir{0}, x{0}, y{0};
-    std::set<std::pair<int, int>> visited{{0, 0}};
-    bool p2_done{false};
-    while(std::getline(std::cin, linetxt)){
-        // Get directions in the from ([LR])(\\d+) using ctre
-        for (auto match: ctre::search_all<"([LR])(\\d+)">(linetxt)){
-            if (match.get<1>() == "L") {
-                dir = (dir + 3) % 4; // Turn left
-            } else if (match.get<1>() == "R") {
-                dir = (dir + 1) % 4; // Turn right
-            }
-
-            int steps = match.get<2>().to_number<int>();
-
-            if(!p2_done){
-                for(int i = 0; i < steps; i++){
-                    switch(dir){
-                        case 0: y--; break; // North
-                        case 1: x++; break; // East
-                        case 2: y++; break; // South
-                        case 3: x--; break; // West
-                    }
-                    if(visited.count({x, y}) == 0) {
-                        visited.insert({x, y});
-                    }else{
-                        p2_done = true;
-                        std::cout << "Part 2: " << (std::abs(x) + std::abs(y)) << "\n";
-                    }
-                }
-            }else{
-                switch(dir){
-                    case 0: y -= steps; break; // North
-                    case 1: x += steps; break; // East
-                    case 2: y += steps; break; // South
-                    case 3: x -= steps; break; // West
-                }
-            }
-            
+    constexpr int P1_DISK_SIZE = 272;
+    std::vector<bool> in;
+    std::getline(std::cin, linetxt);
+    for(int i = 0; i < linetxt.length(); i++){
+        if(linetxt[i] == '1'){
+            in.emplace_back(1);
+        }else{
+            in.push_back(0);
         }
-
-        std::cout << "Part 1: " << (std::abs(x) + std::abs(y)) << "\n";
     }
+
+    std::cout<<"Part 1: ";
+    ans(in, 272);
+
+    std::cout<<"Part 2: ";
+    ans(in, 35651584);
+
 }
