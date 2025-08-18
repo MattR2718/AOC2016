@@ -49,13 +49,21 @@ namespace MD5Hash{
         }
 
         std::string to_string() const {
-            std::string s;
-            s.reserve(32);
-            for (int i = 0; i < 32; i++) {
-                s.push_back(get_hex_char(i));
+            static constexpr char hexmap[] = "0123456789abcdef";
+            std::string s(32, '\0');
+
+            uint64_t parts[2] = {_p1, _p2};
+            for (int j = 0; j < 2; ++j) {
+                uint64_t v = parts[j];
+                for (int i = 0; i < 8; ++i) {
+                    uint8_t byte = (v >> (56 - i * 8)) & 0xFF;
+                    s[j * 16 + i * 2]     = hexmap[byte >> 4];
+                    s[j * 16 + i * 2 + 1] = hexmap[byte & 0x0F];
+                }
             }
             return s;
         }
+
 
         friend std::ostream& operator<< (std::ostream& stream, const Hash& h){
             stream << h.to_string();
