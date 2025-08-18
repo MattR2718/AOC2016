@@ -86,7 +86,7 @@ int main() {
 
     std::cout<<"Part 1: " << p1 <<'\n';
 
-
+    
     int p2 = solve(salt, [](std::string str){
         if(long_cache.contains(str)){
             return long_cache.at(str);
