@@ -19,7 +19,7 @@ struct Disc{
 
 int main() {
 
-    Timer::ScopedTimer t("Day 1");
+    Timer::ScopedTimer t("Day 15");
     std::vector<Disc> discs;
     std::string linetxt;
     while(std::getline(std::cin, linetxt)){
