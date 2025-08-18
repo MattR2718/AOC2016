@@ -7,49 +7,28 @@
 
 #include <timer.h>
 
-bool generate_bit(const std::vector<bool>& in, int n){
-    int len = in.size();
-
-    if(n < len) return in[n];
-
-    int v = len;
-    while(v * 2 + 1 <= n){
-        v *= 2;
-        v++;
+std::vector<char> generate_string(std::vector<char> in, int size) {
+    in.reserve(size);
+    int blocksize = in.size();
+    while(in.size() < size){
+        in.emplace_back('0');
+        for(int i = in.size() - 2; i > -1; i--){
+            in.emplace_back((in[i] == '1' ? '0' : '1'));
+        }
     }
-    if(v == n) return 0;
-    return !generate_bit(in, 2 * v - n);
+    in.resize(size);
+
+    return in;
 }
 
-bool generate_bit_it(const std::vector<bool>& in, int n){
-    int len = in.size();
-    bool invert = false;
+void ans(const std::vector<char>& in, int size){
+    std::vector<char> checksum2(size);
 
-    while (n >= len) {
-        int v = len;
-        while (v * 2 + 1 <= n) {
-            v = v * 2 + 1;
-        }
-        if (v == n) {
-            return invert;
-        }
-        n = 2 * v - n;
-        invert = !invert;
-    }
-
-    return invert ? !in[n] : in[n];
-}
-
-void ans(const std::vector<bool>& in, int size){
-    std::vector<bool> checksum2(size);
-
-    for(int i = 0; i < size; i++){
-        checksum2[i] = generate_bit_it(in, i);
-    }
+    checksum2 = generate_string(in, size);
     int l = checksum2.size();
     while(l % 2 == 0){
         for(int i = 0; i < l - 1; i += 2){
-            checksum2[i / 2] = checksum2[i] == checksum2[i + 1] ? 1 : 0;
+            checksum2[i / 2] = checksum2[i] == checksum2[i + 1] ? '1' : '0';
         }
         l /= 2;
     }
@@ -67,13 +46,13 @@ int main() {
 
     std::string linetxt;
     constexpr int P1_DISK_SIZE = 272;
-    std::vector<bool> in;
+    std::vector<char> in;
     std::getline(std::cin, linetxt);
     for(int i = 0; i < linetxt.length(); i++){
         if(linetxt[i] == '1'){
-            in.emplace_back(1);
+            in.emplace_back('1');
         }else{
-            in.push_back(0);
+            in.push_back('0');
         }
     }
 
