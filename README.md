@@ -16,7 +16,13 @@ This repository contains my solutions for [Advent of Code 2016](https://adventof
 | 8     | ✅     | ✅     |
 | 9     | ✅     | ✅     |
 | 10    | ✅     | ✅     |
-| 11-25 | ❌     | ❌     |
+| 11    | ✅     | ✅     |
+| 12    | ✅     | ✅     |
+| 13    | ✅     | ✅     |
+| 14    | ✅     | ✅     |
+| 15    | ✅     | ✅     |
+| 16    | ✅     | ✅     |
+| 17-25 | ❌     | ❌     |
 
 - ✅ = Completed
 - ❌ = Not started
