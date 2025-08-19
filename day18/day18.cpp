@@ -54,6 +54,49 @@ struct int128{
         low = 0;
         high = 0;
     }
+
+    int128 left_shift(int n = 1) {
+        uint64_t h = high, l = low;
+        if (n >= 128) {
+            h = 0;
+            l = 0;
+        } else if (n >= 64) {
+            h = l << (n - 64);
+            l = 0;
+        } else if (n > 0) {
+            h = (h << n) | (l >> (64 - n));
+            l <<= n;
+        }
+        return int128{h, l, width};
+    }
+
+    int128 right_shift(int n = 1) {
+        uint64_t h = high, l = low;
+        if (n >= 128) {
+            h = 0;
+            l = 0;
+        } else if (n >= 64) {
+            l = h >> (n - 64);
+            h = 0;
+        } else if (n > 0) {
+            l = (l >> n) | (h << (64 - n));
+            h >>= n;
+        }
+        return int128{h, l, width};
+
+    }
+
+    int128 operator|(const int128& other) const {
+        return {high | other.high, low | other.low, width};
+    }
+
+    int128 operator&(const int128& other) const {
+        return {high & other.high, low & other.low, width};
+    }
+
+    int128 operator~() const {
+        return {~high, ~low, width};
+    }
 };
 
 
@@ -73,13 +116,15 @@ int main() {
     p1 = num.count();
     p2 = num.count();
 
+    int128 mask;
+    for(int i = 0; i < num.width; i++) mask.set_bit(i);
+
     for(int n = 1; n < 40; n++){
-        for(int i = 0; i < linetxt.length(); i++){
-            if(num.get(i - 1) && num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
-            else if(!num.get(i - 1) && num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
-            else if(num.get(i - 1) && !num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
-            else if(!num.get(i - 1) && !num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
-        }
+        temp = ((num.right_shift() & num & ~num.left_shift())
+                | (~num.right_shift() & num & num.left_shift())
+                | (num.right_shift() & ~num & ~num.left_shift())
+                | (~num.right_shift() & ~num & num.left_shift()));
+        temp = temp & mask;
         p1 += temp.count();
         num = temp;
         temp.reset();
@@ -88,12 +133,11 @@ int main() {
     std::cout<<"Part 1: " << p1 << '\n';
 
     for(int n = 40; n < 400000; n++){
-        for(int i = 0; i < linetxt.length(); i++){
-            if(num.get(i - 1) && num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
-            else if(!num.get(i - 1) && num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
-            else if(num.get(i - 1) && !num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
-            else if(!num.get(i - 1) && !num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
-        }
+        temp = ((num.right_shift() & num & ~num.left_shift())
+                | (~num.right_shift() & num & num.left_shift())
+                | (num.right_shift() & ~num & ~num.left_shift())
+                | (~num.right_shift() & ~num & num.left_shift()));
+        temp = temp & mask;
         p1 += temp.count();
         num = temp;
         temp.reset();
