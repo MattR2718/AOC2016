@@ -49,6 +49,11 @@ struct int128{
             std::cout<<(get_bit(i) == true ? "^" : ".");
         }
     }
+
+    void reset(){
+        low = 0;
+        high = 0;
+    }
 };
 
 
@@ -59,50 +64,41 @@ int main() {
     std::string linetxt;
     std::getline(std::cin, linetxt);
 
-    std::vector<int128> p1(40);
-    std::vector<int128> p2(400000);
+    int p1 = 0, p2 = 0;
 
-    p1[0].init(linetxt);
-    p2[0] = p1[0];
+    int128 num, temp;
+    num.init(linetxt);
+    temp.width = num.width;
 
-    for(auto& num : p1){
-        num.width = p1[0].width;
-    }
-
-    for(auto& num : p2){
-        num.width = p1[0].width;
-    }
-
-    
+    p1 = num.count();
+    p2 = num.count();
 
     for(int n = 1; n < 40; n++){
-        int128& last = p1[n - 1];
         for(int i = 0; i < linetxt.length(); i++){
-            if(last.get(i - 1) && last.get(i) && !last.get(i + 1)){ p1[n].set_bit(i); }
-            else if(!last.get(i - 1) && last.get(i) && last.get(i + 1)){ p1[n].set_bit(i); }
-            else if(last.get(i - 1) && !last.get(i) && !last.get(i + 1)){ p1[n].set_bit(i); }
-            else if(!last.get(i - 1) && !last.get(i) && last.get(i + 1)){ p1[n].set_bit(i); }
-
+            if(num.get(i - 1) && num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
+            else if(!num.get(i - 1) && num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
+            else if(num.get(i - 1) && !num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
+            else if(!num.get(i - 1) && !num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
         }
+        p1 += temp.count();
+        num = temp;
+        temp.reset();
     }
 
-    std::cout<<"Part 1: " << std::accumulate(p1.begin(), p1.end(), 0, [](int acc, int128 i){
-        return acc + i.count();
-    }) << '\n';
+    std::cout<<"Part 1: " << p1 << '\n';
 
-    for(int n = 1; n < 400000; n++){
-        int128& last = p2[n - 1];
+    for(int n = 40; n < 400000; n++){
         for(int i = 0; i < linetxt.length(); i++){
-            if(last.get(i - 1) && last.get(i) && !last.get(i + 1)){ p2[n].set_bit(i); }
-            else if(!last.get(i - 1) && last.get(i) && last.get(i + 1)){ p2[n].set_bit(i); }
-            else if(last.get(i - 1) && !last.get(i) && !last.get(i + 1)){ p2[n].set_bit(i); }
-            else if(!last.get(i - 1) && !last.get(i) && last.get(i + 1)){ p2[n].set_bit(i); }
-
+            if(num.get(i - 1) && num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
+            else if(!num.get(i - 1) && num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
+            else if(num.get(i - 1) && !num.get(i) && !num.get(i + 1)){ temp.set_bit(i); }
+            else if(!num.get(i - 1) && !num.get(i) && num.get(i + 1)){ temp.set_bit(i); }
         }
+        p1 += temp.count();
+        num = temp;
+        temp.reset();
     }
 
-    std::cout<<"Part 2: " << std::accumulate(p2.begin(), p2.end(), 0, [](int acc, int128 i){
-        return acc + i.count();
-    }) << '\n';
+    std::cout<<"Part 2: " << p1 << '\n';
 
 }
