@@ -8,6 +8,50 @@
 #include <timer.h>
 
 
+struct int128{
+    uint64_t high = 0, low = 0;
+    int width = 0;
+
+    void set_bit(int pos){
+        if(pos < 64){
+            low |= 1ull << pos;
+        }else{
+            high |= 1ull << (pos - 64);
+        }
+    }
+
+    bool get_bit(int pos) const {
+        if(pos < 64){
+            return (low & (1ull << pos)) != 0;
+        } else {
+            return (high & (1ull << (pos - 64))) != 0;
+        }
+    }
+
+    void init(const std::string& s){
+        width = s.length();
+        for(int i = 0; i < s.length(); i++){
+            if(s[i] == '^') set_bit(i);
+        }
+    }
+
+    bool get(int pos){
+        if(pos < 0 || pos >= width) return 0;
+        return get_bit(pos);
+    }
+
+    int count() const {
+        return width - (std::popcount(high) + std::popcount(low));
+    }
+
+    void print(){
+        for(int i = 0; i < width; i++){
+            std::cout<<(get_bit(i) == true ? "^" : ".");
+        }
+    }
+};
+
+
 int main() {
 
     Timer::ScopedTimer t("Day 18");
@@ -15,51 +59,50 @@ int main() {
     std::string linetxt;
     std::getline(std::cin, linetxt);
 
+    std::vector<int128> p1(40);
+    std::vector<int128> p2(400000);
 
-    std::vector<std::string> m{linetxt};
-    while(m.size() < 40){
-        std::string t = "";
-        std::string last = m[m.size() - 1];
-        for(int i = 0; i < m[m.size() - 1].length(); i++){
-            if((i > 0 && last[i - 1] == '^') && (last[i] == '^') && (i == last.length() - 1 || i < last.length() - 1 && last[i + 1] == '.')){ t += "^"; }
-            else if((i == 0 || i > 0 && last[i - 1] == '.') && last[i] == '^' && (i < last.length() - 1 && last[i + 1] == '^')){ t += "^"; }
-            else if((i > 0 && last[i - 1] == '^') && last[i] == '.' && (i == last.length() - 1 || i < last.length() - 1 && last[i + 1] == '.')){ t += "^"; }
-            else if((i == 0 || i > 0 && last[i - 1] == '.') && last[i] == '.' && (i < last.length() - 1 && last[i + 1] == '^')){ t += "^"; }
-            else{ t += "."; }
+    p1[0].init(linetxt);
+    p2[0] = p1[0];
 
-        }
-        m.push_back(t);
+    for(auto& num : p1){
+        num.width = p1[0].width;
     }
 
-    std::cout<<"Part 1: " << std::accumulate(m.begin(), m.end(), 0, [](int acc, std::string s){
-        return acc + std::count_if(s.begin(), s.end(), [](char c){
-            return c == '.';
-        });
+    for(auto& num : p2){
+        num.width = p1[0].width;
+    }
+
+    
+
+    for(int n = 1; n < 40; n++){
+        int128& last = p1[n - 1];
+        for(int i = 0; i < linetxt.length(); i++){
+            if(last.get(i - 1) && last.get(i) && !last.get(i + 1)){ p1[n].set_bit(i); }
+            else if(!last.get(i - 1) && last.get(i) && last.get(i + 1)){ p1[n].set_bit(i); }
+            else if(last.get(i - 1) && !last.get(i) && !last.get(i + 1)){ p1[n].set_bit(i); }
+            else if(!last.get(i - 1) && !last.get(i) && last.get(i + 1)){ p1[n].set_bit(i); }
+
+        }
+    }
+
+    std::cout<<"Part 1: " << std::accumulate(p1.begin(), p1.end(), 0, [](int acc, int128 i){
+        return acc + i.count();
     }) << '\n';
 
-    m.clear();
-    m.emplace_back(linetxt);
-    std::set<std::string> set{};
-    while(m.size() < 400000){
-        std::string t = "";
-        std::string last = m[m.size() - 1];
-        for(int i = 0; i < m[m.size() - 1].length(); i++){
-            if((i > 0 && last[i - 1] == '^') && (last[i] == '^') && (i == last.length() - 1 || i < last.length() - 1 && last[i + 1] == '.')){ t += "^"; }
-            else if((i == 0 || i > 0 && last[i - 1] == '.') && last[i] == '^' && (i < last.length() - 1 && last[i + 1] == '^')){ t += "^"; }
-            else if((i > 0 && last[i - 1] == '^') && last[i] == '.' && (i == last.length() - 1 || i < last.length() - 1 && last[i + 1] == '.')){ t += "^"; }
-            else if((i == 0 || i > 0 && last[i - 1] == '.') && last[i] == '.' && (i < last.length() - 1 && last[i + 1] == '^')){ t += "^"; }
-            else{ t += "."; }
+    for(int n = 1; n < 400000; n++){
+        int128& last = p2[n - 1];
+        for(int i = 0; i < linetxt.length(); i++){
+            if(last.get(i - 1) && last.get(i) && !last.get(i + 1)){ p2[n].set_bit(i); }
+            else if(!last.get(i - 1) && last.get(i) && last.get(i + 1)){ p2[n].set_bit(i); }
+            else if(last.get(i - 1) && !last.get(i) && !last.get(i + 1)){ p2[n].set_bit(i); }
+            else if(!last.get(i - 1) && !last.get(i) && last.get(i + 1)){ p2[n].set_bit(i); }
 
         }
-        m.push_back(t);
     }
 
-    std::cout<<"Part 1: " << std::accumulate(m.begin(), m.end(), 0, [](int acc, std::string s){
-        return acc + std::count_if(s.begin(), s.end(), [](char c){
-            return c == '.';
-        });
+    std::cout<<"Part 2: " << std::accumulate(p2.begin(), p2.end(), 0, [](int acc, int128 i){
+        return acc + i.count();
     }) << '\n';
 
 }
-
-// 1985 low
