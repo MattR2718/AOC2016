@@ -24,7 +24,9 @@ This repository contains my solutions for [Advent of Code 2016](https://adventof
 | 16    | ✅     | ✅     |
 | 17    | ✅     | ✅     |
 | 18    | ✅     | ✅     |
-| 19-25 | ❌     | ❌     |
+| 19    | ✅     | ✅     |
+| 20    | ✅     | ✅     |
+| 21-25 | ❌     | ❌     |
 
 - ✅ = Completed
 - ❌ = Not started
